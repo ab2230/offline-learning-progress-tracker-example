@@ -88,7 +88,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addUser = async (name: string) => {
+    // Always update local first for offline safety
     await addUserStorage(name);
+    // If online, also push to backend immediately
+    try {
+      if (isOnline) {
+        await postSync({ users: [name], progress: [] });
+      }
+    } catch {}
     await refresh();
   };
 
@@ -122,17 +129,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsSyncing(true);
     try {
       const payload = await getSyncPayload();
-      const res = await fetch(`${BACKEND_URL}/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await postSync(payload);
       await clearQueue();
     } finally {
       setIsSyncing(false);
     }
   };
+
+  async function postSync(payload: { users: string[]; progress: any[] }) {
+    const res = await fetch(`${BACKEND_URL}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
 
   const value = useMemo(
     () => ({

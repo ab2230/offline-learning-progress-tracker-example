@@ -30,7 +30,7 @@ function randomQuestions(): Activity[] {
 }
 
 export default function ActivitiesScreen() {
-  const { currentUser } = useApp();
+  const { currentUser, isOnline, syncNow } = useApp();
   const [answers, setAnswers] = useState<{ [k: string]: string }>({});
   const [activities, setActivities] = useState<Activity[]>(() => randomQuestions());
 
@@ -57,7 +57,17 @@ export default function ActivitiesScreen() {
       queued += 1;
     }
 
-    Alert.alert('Saved offline', `Queued ${queued} activity entries for ${currentUser}. Go to Sync tab when online.`);
+    if (isOnline) {
+      try {
+        // Sync immediately when online
+        await syncNow();
+        Alert.alert('Saved and synced', `Sent ${queued} entries for ${currentUser}.`);
+      } catch (e: any) {
+        Alert.alert('Saved offline', `Queued ${queued} entries. Sync failed now, will retry later.`);
+      }
+    } else {
+      Alert.alert('Saved offline', `Queued ${queued} activity entries for ${currentUser}. Go to Sync tab when online.`);
+    }
     setAnswers({});
   };
 
