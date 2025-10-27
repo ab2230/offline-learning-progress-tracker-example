@@ -1,31 +1,6 @@
 {
   "users": [
-    "Abrham"
   ],
   "progress": [
-    {
-      "id": "1761377760102-sfkc73",
-      "user": "Abrham",
-      "activityId": "q1",
-      "answer": "2",
-      "correct": false,
-      "timestamp": "2025-10-25T07:35:55.001Z"
-    },
-    {
-      "id": "1761377760103-8axy4f",
-      "user": "Abrham",
-      "activityId": "q2",
-      "answer": "18",
-      "correct": true,
-      "timestamp": "2025-10-25T07:35:55.009Z"
-    },
-    {
-      "id": "1761377760103-a5usxc",
-      "user": "Abrham",
-      "activityId": "q3",
-      "answer": "7",
-      "correct": true,
-      "timestamp": "2025-10-25T07:35:55.014Z"
-    }
   ]
 }
