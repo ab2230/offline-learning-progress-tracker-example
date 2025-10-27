@@ -4,7 +4,7 @@ import { useApp } from '../context';
 
 export default function StudentsScreen() {
   const [name, setName] = useState('');
-  const { displayUsers, currentUser, addUser, selectUser, autoSync, setAutoSync } = useApp();
+  const { displayUsers, currentUser, addUser, selectUser, autoSync, setAutoSync, isOnline, syncNow } = useApp();
 
   const onAdd = async () => {
     if (!name.trim()) return;
@@ -50,7 +50,18 @@ export default function StudentsScreen() {
       <Text style={styles.subtitle}>Sync Settings</Text>
       <View style={[styles.userItem, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
         <Text style={styles.userText}>Auto Sync on reconnect</Text>
-        <Switch value={autoSync} onValueChange={setAutoSync} />
+        <Switch
+          value={autoSync}
+          onValueChange={async (v) => {
+            await setAutoSync(v);
+            if (v && isOnline) {
+              try {
+                await syncNow();
+                Alert.alert('Auto Sync', 'Online: queued data synced.');
+              } catch {}
+            }
+          }}
+        />
       </View>
     </View>
   );

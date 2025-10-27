@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { clearQueue, getQueue, getSyncPayload } from '../storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
@@ -23,6 +25,21 @@ export default function SyncScreen() {
   useEffect(() => {
     refresh();
   }, []);
+
+  // Auto-refresh when the tab/screen is focused, and poll every 2s while focused
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      refresh();
+      const id = setInterval(() => {
+        if (mounted) refresh();
+      }, 2000);
+      return () => {
+        mounted = false;
+        clearInterval(id);
+      };
+    }, [])
+  );
 
   const onHealthCheck = async () => {
     try {
