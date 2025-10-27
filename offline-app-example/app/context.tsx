@@ -34,12 +34,14 @@ export type AppContextType = {
   refresh: () => Promise<void>;
   // Connectivity
   isOnline: boolean;
+  justCameOnline: boolean;
   // Auto sync setting
   autoSync: boolean;
   setAutoSync: (v: boolean) => Promise<void>;
   // Sync actions
   syncNow: () => Promise<void>;
   isSyncing: boolean;
+  submitProgress: (entries: { user: string; activityId: string; answer?: string | null; correct?: boolean | null; timestamp: string }[]) => Promise<void>;
   // Server users
   serverUsers: string[];
   refreshServerUsers: () => Promise<void>;
@@ -51,6 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [justCameOnline, setJustCameOnline] = useState<boolean>(false);
   const [autoSync, setAutoSyncState] = useState<boolean>(false);
   const [serverUsers, setServerUsers] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -69,10 +72,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAutoSyncState(v);
     })();
     // subscribe to connectivity changes
+    let prevOnline = isOnline;
     const unsub = NetInfo.addEventListener(async (state: NetInfoState) => {
       const online = Boolean(state.isConnected && state.isInternetReachable !== false);
       setIsOnline(online);
       if (online) {
+        // If transitioning from offline -> online, show a short toast
+        if (prevOnline === false) {
+          setJustCameOnline(true);
+          setTimeout(() => setJustCameOnline(false), 2500);
+        }
+        prevOnline = online;
         // Fetch server users when coming online
         await refreshServerUsers();
         // Auto-sync queued items if enabled
@@ -82,6 +92,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             await syncNow();
           }
         }
+      } else {
+        prevOnline = online;
       }
     });
     return () => unsub();
@@ -145,6 +157,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   }
 
+  const submitProgress = async (
+    entries: { user: string; activityId: string; answer?: string | null; correct?: boolean | null; timestamp: string }[]
+  ) => {
+    if (!entries?.length) return;
+    // If online, try to post directly without using the queue
+    if (isOnline) {
+      await postSync({ users: [], progress: entries });
+      return;
+    }
+    // If offline, caller can enqueue
+    throw new Error('offline');
+  };
+
   const value = useMemo(
     () => ({
       users,
@@ -154,14 +179,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       selectUser,
       refresh,
       isOnline,
+      justCameOnline,
       autoSync,
       setAutoSync,
       syncNow,
       isSyncing,
+      submitProgress,
       serverUsers,
       refreshServerUsers,
     }),
-    [users, currentUser, isOnline, autoSync, isSyncing, serverUsers]
+    [users, currentUser, isOnline, justCameOnline, autoSync, isSyncing, serverUsers]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

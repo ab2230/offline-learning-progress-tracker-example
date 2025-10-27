@@ -30,7 +30,7 @@ function randomQuestions(): Activity[] {
 }
 
 export default function ActivitiesScreen() {
-  const { currentUser, isOnline, syncNow } = useApp();
+  const { currentUser, isOnline, submitProgress } = useApp();
   const [answers, setAnswers] = useState<{ [k: string]: string }>({});
   const [activities, setActivities] = useState<Activity[]>(() => randomQuestions());
 
@@ -42,31 +42,31 @@ export default function ActivitiesScreen() {
       return;
     }
 
-    let queued = 0;
-    for (const a of activities) {
+    // Build entries from current answers
+    const entries: ProgressEntry[] = activities.map((a) => {
       const given = (answers[a.id] || '').trim();
       const correct = given.length > 0 ? given === a.correct : null;
-      const entry: ProgressEntry = {
-        user: currentUser,
+      return {
+        user: currentUser!,
         activityId: a.id,
         answer: given || null,
         correct,
         timestamp: nowISO(),
-      };
-      await enqueue(entry);
-      queued += 1;
-    }
+      } as ProgressEntry;
+    });
 
     if (isOnline) {
       try {
-        // Sync immediately when online
-        await syncNow();
-        Alert.alert('Saved and synced', `Sent ${queued} entries for ${currentUser}.`);
+        await submitProgress(entries);
+        Alert.alert('Saved and synced', `Sent ${entries.length} entries for ${currentUser}.`);
       } catch (e: any) {
-        Alert.alert('Saved offline', `Queued ${queued} entries. Sync failed now, will retry later.`);
+        // Fallback to offline queue if post fails
+        for (const entry of entries) await enqueue(entry);
+        Alert.alert('Saved offline', `Queued ${entries.length} entries. Sync failed now, will retry later.`);
       }
     } else {
-      Alert.alert('Saved offline', `Queued ${queued} activity entries for ${currentUser}. Go to Sync tab when online.`);
+      for (const entry of entries) await enqueue(entry);
+      Alert.alert('Saved offline', `Queued ${entries.length} activity entries for ${currentUser}. Go to Sync tab when online.`);
     }
     setAnswers({});
   };
@@ -103,7 +103,7 @@ export default function ActivitiesScreen() {
         </View>
       ))}
 
-      <Button title="Save Offline" onPress={onSubmit} />
+      <Button title={!isOnline ? "Save Offline" : "Save"} onPress={onSubmit} />
     </ScrollView>
   );
 }

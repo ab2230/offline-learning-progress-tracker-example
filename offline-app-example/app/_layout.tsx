@@ -15,12 +15,14 @@ export const unstable_settings = {
 
 const MainApp = () => {
   const insets = useSafeAreaInsets();
-  const { isOnline, autoSync, isSyncing } = useApp();
-  const showBanner = !isOnline || isSyncing;
+  const { isOnline, isSyncing, justCameOnline } = useApp();
+  const showBanner = !isOnline || isSyncing || justCameOnline;
   const bannerBg = !isOnline ? '#dc2626' : '#16a34a';
   const bannerText = !isOnline
     ? 'Offline: Saving locally. Sync when back online.'
-    : 'Online: Auto-sync in progress…';
+    : isSyncing
+      ? 'Online: Auto-sync in progress…'
+      : 'Back online';
   return (
     <View
     style={{
